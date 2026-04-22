@@ -1,77 +1,49 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal } from "lucide-react";
-
-// ----- Station data (all 54 current SkyTrain stations) -----
-// Each station has a Wikipedia article slug used to fetch a lead image.
-const STATIONS = [
-  { name: "Waterfront",                lines: ["expo", "canada"],   slug: "Waterfront_station_(Vancouver)" },
-  { name: "Burrard",                   lines: ["expo"],             slug: "Burrard_station" },
-  { name: "Granville",                 lines: ["expo"],             slug: "Granville_station_(SkyTrain)" },
-  { name: "Stadium–Chinatown",         lines: ["expo"],             slug: "Stadium%E2%80%93Chinatown_station" },
-  { name: "Main Street–Science World", lines: ["expo"],             slug: "Main_Street%E2%80%93Science_World_station" },
-  { name: "Commercial–Broadway",       lines: ["expo", "millennium"], slug: "Commercial%E2%80%93Broadway_station" },
-  { name: "Nanaimo",                   lines: ["expo"],             slug: "Nanaimo_station" },
-  { name: "29th Avenue",               lines: ["expo"],             slug: "29th_Avenue_station" },
-  { name: "Joyce–Collingwood",         lines: ["expo"],             slug: "Joyce%E2%80%93Collingwood_station" },
-  { name: "Patterson",                 lines: ["expo"],             slug: "Patterson_station_(SkyTrain)" },
-  { name: "Metrotown",                 lines: ["expo"],             slug: "Metrotown_station" },
-  { name: "Royal Oak",                 lines: ["expo"],             slug: "Royal_Oak_station_(SkyTrain)" },
-  { name: "Edmonds",                   lines: ["expo"],             slug: "Edmonds_station_(SkyTrain)" },
-  { name: "22nd Street",               lines: ["expo"],             slug: "22nd_Street_station_(SkyTrain)" },
-  { name: "New Westminster",           lines: ["expo"],             slug: "New_Westminster_station" },
-  { name: "Columbia",                  lines: ["expo"],             slug: "Columbia_station_(SkyTrain)" },
-  { name: "Sapperton",                 lines: ["expo"],             slug: "Sapperton_station" },
-  { name: "Braid",                     lines: ["expo"],             slug: "Braid_station" },
-  { name: "Lougheed Town Centre",      lines: ["expo", "millennium"], slug: "Lougheed_Town_Centre_station" },
-  { name: "Production Way–University", lines: ["expo", "millennium"], slug: "Production_Way%E2%80%93University_station" },
-  { name: "Scott Road",                lines: ["expo"],             slug: "Scott_Road_station" },
-  { name: "Gateway",                   lines: ["expo"],             slug: "Gateway_station_(SkyTrain)" },
-  { name: "Surrey Central",            lines: ["expo"],             slug: "Surrey_Central_station" },
-  { name: "King George",               lines: ["expo"],             slug: "King_George_station" },
-  { name: "VCC–Clark",                 lines: ["millennium"],       slug: "VCC%E2%80%93Clark_station" },
-  { name: "Renfrew",                   lines: ["millennium"],       slug: "Renfrew_station" },
-  { name: "Rupert",                    lines: ["millennium"],       slug: "Rupert_station" },
-  { name: "Gilmore",                   lines: ["millennium"],       slug: "Gilmore_station_(SkyTrain)" },
-  { name: "Brentwood Town Centre",     lines: ["millennium"],       slug: "Brentwood_Town_Centre_station" },
-  { name: "Holdom",                    lines: ["millennium"],       slug: "Holdom_station" },
-  { name: "Sperling–Burnaby Lake",     lines: ["millennium"],       slug: "Sperling%E2%80%93Burnaby_Lake_station" },
-  { name: "Lake City Way",             lines: ["millennium"],       slug: "Lake_City_Way_station" },
-  { name: "Burquitlam",                lines: ["millennium"],       slug: "Burquitlam_station" },
-  { name: "Moody Centre",              lines: ["millennium"],       slug: "Moody_Centre_station" },
-  { name: "Inlet Centre",              lines: ["millennium"],       slug: "Inlet_Centre_station" },
-  { name: "Coquitlam Central",         lines: ["millennium"],       slug: "Coquitlam_Central_station" },
-  { name: "Lincoln",                   lines: ["millennium"],       slug: "Lincoln_station_(SkyTrain)" },
-  { name: "Lafarge Lake–Douglas",      lines: ["millennium"],       slug: "Lafarge_Lake%E2%80%93Douglas_station" },
-  { name: "Vancouver City Centre",     lines: ["canada"],           slug: "Vancouver_City_Centre_station" },
-  { name: "Yaletown–Roundhouse",       lines: ["canada"],           slug: "Yaletown%E2%80%93Roundhouse_station" },
-  { name: "Olympic Village",           lines: ["canada"],           slug: "Olympic_Village_station" },
-  { name: "Broadway–City Hall",        lines: ["canada"],           slug: "Broadway%E2%80%93City_Hall_station" },
-  { name: "King Edward",               lines: ["canada"],           slug: "King_Edward_station" },
-  { name: "Oakridge–41st Avenue",      lines: ["canada"],           slug: "Oakridge%E2%80%9341st_Avenue_station" },
-  { name: "Langara–49th Avenue",       lines: ["canada"],           slug: "Langara%E2%80%9349th_Avenue_station" },
-  { name: "Marine Drive",              lines: ["canada"],           slug: "Marine_Drive_station" },
-  { name: "Bridgeport",                lines: ["canada"],           slug: "Bridgeport_station_(SkyTrain)" },
-  { name: "Aberdeen",                  lines: ["canada"],           slug: "Aberdeen_station_(SkyTrain)" },
-  { name: "Lansdowne",                 lines: ["canada"],           slug: "Lansdowne_station_(SkyTrain)" },
-  { name: "Capstan",                   lines: ["canada"],           slug: "Capstan_station" },
-  { name: "Richmond–Brighouse",        lines: ["canada"],           slug: "Richmond%E2%80%93Brighouse_station" },
-  { name: "Templeton",                 lines: ["canada"],           slug: "Templeton_station" },
-  { name: "Sea Island Centre",         lines: ["canada"],           slug: "Sea_Island_Centre_station" },
-  { name: "YVR–Airport",               lines: ["canada"],           slug: "YVR%E2%80%93Airport_station" },
-];
-
-// ----- Constants -----
-const LINE_INFO = {
-  expo:       { name: "Expo",       color: "#1565C0", bg: "rgba(21, 101, 192, 0.12)" },
-  millennium: { name: "Millennium", color: "#FFB300", bg: "rgba(255, 179, 0, 0.18)"  },
-  canada:     { name: "Canada",     color: "#00A887", bg: "rgba(0, 168, 135, 0.14)"  },
-};
+import { CITIES, DEFAULT_CITY_ID } from "./cities";
 
 const INITIAL_ELO = 1500;
 const K_FACTOR = 32;
 
-const STORAGE_KEY = "skytrain_ranker_state_v1";
+const STATS_KEY_PREFIX = "transit_ranker_state_v1";
+const ACTIVE_CITY_KEY = "transit_ranker_active_city_v1";
+const LEGACY_STORAGE_KEY = "skytrain_ranker_state_v1";
 const IMG_CACHE_KEY = "skytrain_ranker_images_v4";
+
+const statsKeyFor = (cityId) => `${STATS_KEY_PREFIX}:${cityId}`;
+
+// One-shot migration: existing users have their Vancouver rankings under the
+// old global key. Move them under the Vancouver-scoped key on first load.
+function migrateLegacyStorage() {
+  try {
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!legacy) return;
+    const vancouverKey = statsKeyFor(DEFAULT_CITY_ID);
+    if (!localStorage.getItem(vancouverKey)) {
+      localStorage.setItem(vancouverKey, legacy);
+    }
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch (e) {}
+}
+
+function loadStatsForCity(cityId) {
+  try {
+    const value = localStorage.getItem(statsKeyFor(cityId));
+    if (!value) return {};
+    const saved = JSON.parse(value);
+    return saved.stats || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function loadActiveCityId() {
+  try {
+    const id = localStorage.getItem(ACTIVE_CITY_KEY);
+    if (id && CITIES[id]) return id;
+  } catch (e) {}
+  return DEFAULT_CITY_ID;
+}
 
 // ----- ELO math -----
 function expectedScore(rA, rB) {
@@ -87,8 +59,8 @@ function updateElo(rA, rB, scoreA) {
 }
 
 // ----- Pick the next pair: prefer stations with the fewest matchups, then random partner -----
-function pickPair(stats, lastPairKey) {
-  const names = STATIONS.map((s) => s.name);
+function pickPair(stations, stats, lastPairKey) {
+  const names = stations.map((s) => s.name);
   // Sort by match count ascending, with a small random tiebreak so it doesn't always pick the same one
   const sortedByCount = [...names].sort((a, b) => {
     const ca = stats[a]?.matches ?? 0;
@@ -171,7 +143,7 @@ async function fetchStationImages(slug) {
 }
 
 // ----- Station card -----
-function StationCard({ station, onPick, disabled, side }) {
+function StationCard({ station, onPick, disabled, side, lineInfo }) {
   const [imgUrls, setImgUrls] = useState(undefined); // undefined=loading, []=none, [...]=ok
   const [loadedFlags, setLoadedFlags] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -195,7 +167,7 @@ function StationCard({ station, onPick, disabled, side }) {
   }, [imgUrls]);
 
   const primaryLine = station.lines[0];
-  const accent = LINE_INFO[primaryLine].color;
+  const accent = lineInfo[primaryLine].color;
   const hasImages = imgUrls && imgUrls.length > 0;
   const showSpinner = imgUrls === undefined || (hasImages && !loadedFlags[0]);
 
@@ -258,9 +230,9 @@ function StationCard({ station, onPick, disabled, side }) {
             <span
               key={l}
               className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded"
-              style={{ backgroundColor: LINE_INFO[l].bg, color: LINE_INFO[l].color }}
+              style={{ backgroundColor: lineInfo[l].bg, color: lineInfo[l].color }}
             >
-              {LINE_INFO[l].name}
+              {lineInfo[l].name}
             </span>
           ))}
         </div>
@@ -270,15 +242,15 @@ function StationCard({ station, onPick, disabled, side }) {
 }
 
 // ----- Leaderboard -----
-function Leaderboard({ stats, totalMatches }) {
+function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
   const ranked = useMemo(() => {
-    return STATIONS.map((s) => ({
+    return stations.map((s) => ({
       ...s,
       elo: stats[s.name]?.elo ?? INITIAL_ELO,
       matches: stats[s.name]?.matches ?? 0,
       wins: stats[s.name]?.wins ?? 0,
     })).sort((a, b) => b.elo - a.elo);
-  }, [stats]);
+  }, [stats, stations]);
 
   const maxElo = ranked[0]?.elo ?? INITIAL_ELO;
   const minElo = ranked[ranked.length - 1]?.elo ?? INITIAL_ELO;
@@ -294,7 +266,7 @@ function Leaderboard({ stats, totalMatches }) {
       <div className="space-y-1.5">
         {ranked.map((s, idx) => {
           const primaryLine = s.lines[0];
-          const accent = LINE_INFO[primaryLine].color;
+          const accent = lineInfo[primaryLine].color;
           const barPct = ((s.elo - minElo) / eloRange) * 100;
           const isTop3 = idx < 3 && s.matches > 0;
           return (
@@ -319,7 +291,7 @@ function Leaderboard({ stats, totalMatches }) {
                   </span>
                   <div className="flex gap-1">
                     {s.lines.map((l) => (
-                      <span key={l} className="w-2 h-2 rounded-full" style={{ backgroundColor: LINE_INFO[l].color }} />
+                      <span key={l} className="w-2 h-2 rounded-full" style={{ backgroundColor: lineInfo[l].color }} />
                     ))}
                   </div>
                 </div>
@@ -348,6 +320,11 @@ function Leaderboard({ stats, totalMatches }) {
 
 // ----- Main component -----
 export default function App() {
+  const [activeCityId, setActiveCityId] = useState(DEFAULT_CITY_ID);
+  const city = CITIES[activeCityId];
+  const stations = city.stations;
+  const lineInfo = city.lineInfo;
+
   const [stats, setStats] = useState({}); // { name: { elo, matches, wins } }
   const [pair, setPair] = useState(null); // [nameA, nameB]
   const [lastPairKey, setLastPairKey] = useState("");
@@ -356,12 +333,12 @@ export default function App() {
   const [picking, setPicking] = useState(false);
   const [recentChange, setRecentChange] = useState(null); // { winner, loser, deltaW, deltaL }
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerA, setPickerA] = useState(STATIONS[0].name);
-  const [pickerB, setPickerB] = useState(STATIONS[1].name);
+  const [pickerA, setPickerA] = useState(stations[0].name);
+  const [pickerB, setPickerB] = useState(stations[1].name);
 
   const sortedNames = useMemo(
-    () => [...STATIONS].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
-    []
+    () => [...stations].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
+    [stations]
   );
 
   const totalMatches = useMemo(
@@ -369,31 +346,28 @@ export default function App() {
     [stats]
   );
 
-  // Initial load
+  // Initial load — migrate legacy storage, then load the last active city.
   useEffect(() => {
     loadImageCacheFromStorage();
-    try {
-      const value = localStorage.getItem(STORAGE_KEY);
-      if (value) {
-        const saved = JSON.parse(value);
-        setStats(saved.stats || {});
-        setPair(pickPair(saved.stats || {}, ""));
-      } else {
-        setPair(pickPair({}, ""));
-      }
-    } catch (e) {
-      setPair(pickPair({}, ""));
-    }
+    migrateLegacyStorage();
+    const initialCityId = loadActiveCityId();
+    const initialCity = CITIES[initialCityId];
+    const initialStats = loadStatsForCity(initialCityId);
+    setActiveCityId(initialCityId);
+    setStats(initialStats);
+    setPickerA(initialCity.stations[0].name);
+    setPickerB(initialCity.stations[1].name);
+    setPair(pickPair(initialCity.stations, initialStats, ""));
     setLoading(false);
   }, []);
 
-  // Persist whenever stats change (but not on first paint)
+  // Persist stats to the active city's key whenever they change.
   useEffect(() => {
     if (loading) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ stats }));
+      localStorage.setItem(statsKeyFor(activeCityId), JSON.stringify({ stats }));
     } catch (e) {}
-  }, [stats, loading]);
+  }, [stats, activeCityId, loading]);
 
   const handlePick = useCallback((winnerName, loserName) => {
     if (picking) return;
@@ -421,20 +395,20 @@ export default function App() {
       setStats((curr) => {
         const key = [winnerName, loserName].sort().join("|");
         setLastPairKey(key);
-        setPair(pickPair(curr, key));
+        setPair(pickPair(stations, curr, key));
         return curr;
       });
       setPicking(false);
       setTimeout(() => setRecentChange(null), 1800);
     }, 350);
-  }, [picking]);
+  }, [picking, stations]);
 
   const handleSkip = useCallback(() => {
     if (!pair) return;
     const key = [pair[0], pair[1]].sort().join("|");
     setLastPairKey(key);
-    setPair(pickPair(stats, key));
-  }, [pair, stats]);
+    setPair(pickPair(stations, stats, key));
+  }, [pair, stats, stations]);
 
   const handleSetCustomPair = useCallback(() => {
     if (pickerA === pickerB) return;
@@ -443,16 +417,34 @@ export default function App() {
   }, [pickerA, pickerB]);
 
   const handleReset = useCallback(async () => {
-    if (!confirm("Reset all rankings? This cannot be undone.")) return;
+    if (!confirm(`Reset ${city.name} rankings? This cannot be undone.`)) return;
     setStats({});
     setRecentChange(null);
-    setPair(pickPair({}, ""));
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-  }, []);
+    setPair(pickPair(stations, {}, ""));
+    try { localStorage.removeItem(statsKeyFor(activeCityId)); } catch (e) {}
+  }, [activeCityId, city.name, stations]);
+
+  // Switching cities: atomically load the target city's stats and reset match state.
+  // Rankings stay isolated per city — we never mix stats across cities.
+  const handleCityChange = useCallback((nextCityId) => {
+    if (nextCityId === activeCityId) return;
+    const nextCity = CITIES[nextCityId];
+    if (!nextCity) return;
+    const nextStats = loadStatsForCity(nextCityId);
+    setActiveCityId(nextCityId);
+    setStats(nextStats);
+    setPair(pickPair(nextCity.stations, nextStats, ""));
+    setLastPairKey("");
+    setRecentChange(null);
+    setShowPicker(false);
+    setPickerA(nextCity.stations[0].name);
+    setPickerB(nextCity.stations[1].name);
+    try { localStorage.setItem(ACTIVE_CITY_KEY, nextCityId); } catch (e) {}
+  }, [activeCityId]);
 
   const stationByName = useCallback(
-    (name) => STATIONS.find((s) => s.name === name),
-    []
+    (name) => stations.find((s) => s.name === name),
+    [stations]
   );
 
   if (loading) {
@@ -481,23 +473,39 @@ export default function App() {
               <div className="w-10 h-10 rounded-lg bg-stone-900 flex items-center justify-center">
                 <Train className="w-5 h-5 text-white" />
               </div>
-              {/* Three line color dots */}
+              {/* Active-city line color dots */}
               <div className="absolute -bottom-1 -right-1 flex gap-[2px]">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.expo.color }} />
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.millennium.color }} />
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.canada.color }} />
+                {Object.values(lineInfo).map((info, i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: info.color }}
+                  />
+                ))}
               </div>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1
                 className="text-xl sm:text-2xl font-bold text-stone-900 leading-none truncate"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
               >
-                SkyTrain Showdown
+                Transit Station Showdown
               </h1>
-              <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-500 mt-1">
-                Vancouver · 54 stations · Elo ranked
-              </p>
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <select
+                  value={activeCityId}
+                  onChange={(e) => handleCityChange(e.target.value)}
+                  aria-label="Select city"
+                  className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-700 font-semibold bg-stone-100 hover:bg-stone-200 rounded-full px-2.5 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-stone-400 cursor-pointer transition-colors"
+                >
+                  {Object.values(CITIES).map((c) => (
+                    <option key={c.id} value={c.id}>{c.selectorLabel}</option>
+                  ))}
+                </select>
+                <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-500">
+                  {stations.length} stations · Elo ranked
+                </span>
+              </div>
             </div>
           </div>
 
@@ -548,6 +556,7 @@ export default function App() {
                 onPick={() => handlePick(pair[0], pair[1])}
                 disabled={picking}
                 side="A"
+                lineInfo={lineInfo}
               />
               <div className="flex md:flex-col items-center justify-center gap-2 py-2">
                 <div className="hidden md:block w-px h-12 bg-stone-300" />
@@ -564,6 +573,7 @@ export default function App() {
                 onPick={() => handlePick(pair[1], pair[0])}
                 disabled={picking}
                 side="B"
+                lineInfo={lineInfo}
               />
             </div>
 
@@ -669,7 +679,12 @@ export default function App() {
               </p>
             </div>
 
-            <Leaderboard stats={stats} totalMatches={Math.floor(totalMatches)} />
+            <Leaderboard
+              stats={stats}
+              totalMatches={Math.floor(totalMatches)}
+              stations={stations}
+              lineInfo={lineInfo}
+            />
 
             <div className="flex justify-center pt-2">
               <button
