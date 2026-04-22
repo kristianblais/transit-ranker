@@ -1,64 +1,67 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal } from "lucide-react";
+import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal, Globe } from "lucide-react";
+import { supabase, getDeviceId } from "./supabase.js";
 
 // ----- Station data (all 54 current SkyTrain stations) -----
 // Each station has a Wikipedia article slug used to fetch a lead image.
 const STATIONS = [
-  { name: "Waterfront",                lines: ["expo", "canada"],   slug: "Waterfront_station_(Vancouver)" },
-  { name: "Burrard",                   lines: ["expo"],             slug: "Burrard_station" },
-  { name: "Granville",                 lines: ["expo"],             slug: "Granville_station_(SkyTrain)" },
-  { name: "Stadium–Chinatown",         lines: ["expo"],             slug: "Stadium%E2%80%93Chinatown_station" },
-  { name: "Main Street–Science World", lines: ["expo"],             slug: "Main_Street%E2%80%93Science_World_station" },
-  { name: "Commercial–Broadway",       lines: ["expo", "millennium"], slug: "Commercial%E2%80%93Broadway_station" },
-  { name: "Nanaimo",                   lines: ["expo"],             slug: "Nanaimo_station" },
-  { name: "29th Avenue",               lines: ["expo"],             slug: "29th_Avenue_station" },
-  { name: "Joyce–Collingwood",         lines: ["expo"],             slug: "Joyce%E2%80%93Collingwood_station" },
-  { name: "Patterson",                 lines: ["expo"],             slug: "Patterson_station_(SkyTrain)" },
-  { name: "Metrotown",                 lines: ["expo"],             slug: "Metrotown_station" },
-  { name: "Royal Oak",                 lines: ["expo"],             slug: "Royal_Oak_station_(SkyTrain)" },
-  { name: "Edmonds",                   lines: ["expo"],             slug: "Edmonds_station_(SkyTrain)" },
-  { name: "22nd Street",               lines: ["expo"],             slug: "22nd_Street_station_(SkyTrain)" },
-  { name: "New Westminster",           lines: ["expo"],             slug: "New_Westminster_station" },
-  { name: "Columbia",                  lines: ["expo"],             slug: "Columbia_station_(SkyTrain)" },
-  { name: "Sapperton",                 lines: ["expo"],             slug: "Sapperton_station" },
-  { name: "Braid",                     lines: ["expo"],             slug: "Braid_station" },
-  { name: "Lougheed Town Centre",      lines: ["expo", "millennium"], slug: "Lougheed_Town_Centre_station" },
-  { name: "Production Way–University", lines: ["expo", "millennium"], slug: "Production_Way%E2%80%93University_station" },
-  { name: "Scott Road",                lines: ["expo"],             slug: "Scott_Road_station" },
-  { name: "Gateway",                   lines: ["expo"],             slug: "Gateway_station_(SkyTrain)" },
-  { name: "Surrey Central",            lines: ["expo"],             slug: "Surrey_Central_station" },
-  { name: "King George",               lines: ["expo"],             slug: "King_George_station" },
-  { name: "VCC–Clark",                 lines: ["millennium"],       slug: "VCC%E2%80%93Clark_station" },
-  { name: "Renfrew",                   lines: ["millennium"],       slug: "Renfrew_station" },
-  { name: "Rupert",                    lines: ["millennium"],       slug: "Rupert_station" },
-  { name: "Gilmore",                   lines: ["millennium"],       slug: "Gilmore_station_(SkyTrain)" },
-  { name: "Brentwood Town Centre",     lines: ["millennium"],       slug: "Brentwood_Town_Centre_station" },
-  { name: "Holdom",                    lines: ["millennium"],       slug: "Holdom_station" },
-  { name: "Sperling–Burnaby Lake",     lines: ["millennium"],       slug: "Sperling%E2%80%93Burnaby_Lake_station" },
-  { name: "Lake City Way",             lines: ["millennium"],       slug: "Lake_City_Way_station" },
-  { name: "Burquitlam",                lines: ["millennium"],       slug: "Burquitlam_station" },
-  { name: "Moody Centre",              lines: ["millennium"],       slug: "Moody_Centre_station" },
-  { name: "Inlet Centre",              lines: ["millennium"],       slug: "Inlet_Centre_station" },
-  { name: "Coquitlam Central",         lines: ["millennium"],       slug: "Coquitlam_Central_station" },
-  { name: "Lincoln",                   lines: ["millennium"],       slug: "Lincoln_station_(SkyTrain)" },
-  { name: "Lafarge Lake–Douglas",      lines: ["millennium"],       slug: "Lafarge_Lake%E2%80%93Douglas_station" },
-  { name: "Vancouver City Centre",     lines: ["canada"],           slug: "Vancouver_City_Centre_station" },
-  { name: "Yaletown–Roundhouse",       lines: ["canada"],           slug: "Yaletown%E2%80%93Roundhouse_station" },
-  { name: "Olympic Village",           lines: ["canada"],           slug: "Olympic_Village_station" },
-  { name: "Broadway–City Hall",        lines: ["canada"],           slug: "Broadway%E2%80%93City_Hall_station" },
-  { name: "King Edward",               lines: ["canada"],           slug: "King_Edward_station" },
-  { name: "Oakridge–41st Avenue",      lines: ["canada"],           slug: "Oakridge%E2%80%9341st_Avenue_station" },
-  { name: "Langara–49th Avenue",       lines: ["canada"],           slug: "Langara%E2%80%9349th_Avenue_station" },
-  { name: "Marine Drive",              lines: ["canada"],           slug: "Marine_Drive_station" },
-  { name: "Bridgeport",                lines: ["canada"],           slug: "Bridgeport_station_(SkyTrain)" },
-  { name: "Aberdeen",                  lines: ["canada"],           slug: "Aberdeen_station_(SkyTrain)" },
-  { name: "Lansdowne",                 lines: ["canada"],           slug: "Lansdowne_station_(SkyTrain)" },
-  { name: "Capstan",                   lines: ["canada"],           slug: "Capstan_station" },
-  { name: "Richmond–Brighouse",        lines: ["canada"],           slug: "Richmond%E2%80%93Brighouse_station" },
-  { name: "Templeton",                 lines: ["canada"],           slug: "Templeton_station" },
-  { name: "Sea Island Centre",         lines: ["canada"],           slug: "Sea_Island_Centre_station" },
-  { name: "YVR–Airport",               lines: ["canada"],           slug: "YVR%E2%80%93Airport_station" },
+  { id: "vancouver:skytrain:expo:waterfront",                name: "Waterfront",                lines: ["expo", "canada"],     slug: "Waterfront_station_(Vancouver)" },
+  { id: "vancouver:skytrain:expo:burrard",                   name: "Burrard",                   lines: ["expo"],               slug: "Burrard_station" },
+  { id: "vancouver:skytrain:expo:granville",                 name: "Granville",                 lines: ["expo"],               slug: "Granville_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:stadium-chinatown",         name: "Stadium–Chinatown",         lines: ["expo"],               slug: "Stadium%E2%80%93Chinatown_station" },
+  { id: "vancouver:skytrain:expo:main-street-science-world", name: "Main Street–Science World", lines: ["expo"],               slug: "Main_Street%E2%80%93Science_World_station" },
+  { id: "vancouver:skytrain:expo:commercial-broadway",       name: "Commercial–Broadway",       lines: ["expo", "millennium"], slug: "Commercial%E2%80%93Broadway_station" },
+  { id: "vancouver:skytrain:expo:nanaimo",                   name: "Nanaimo",                   lines: ["expo"],               slug: "Nanaimo_station" },
+  { id: "vancouver:skytrain:expo:29th-avenue",               name: "29th Avenue",               lines: ["expo"],               slug: "29th_Avenue_station" },
+  { id: "vancouver:skytrain:expo:joyce-collingwood",         name: "Joyce–Collingwood",         lines: ["expo"],               slug: "Joyce%E2%80%93Collingwood_station" },
+  { id: "vancouver:skytrain:expo:patterson",                 name: "Patterson",                 lines: ["expo"],               slug: "Patterson_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:metrotown",                 name: "Metrotown",                 lines: ["expo"],               slug: "Metrotown_station" },
+  { id: "vancouver:skytrain:expo:royal-oak",                 name: "Royal Oak",                 lines: ["expo"],               slug: "Royal_Oak_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:edmonds",                   name: "Edmonds",                   lines: ["expo"],               slug: "Edmonds_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:22nd-street",               name: "22nd Street",               lines: ["expo"],               slug: "22nd_Street_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:new-westminster",           name: "New Westminster",           lines: ["expo"],               slug: "New_Westminster_station" },
+  { id: "vancouver:skytrain:expo:columbia",                  name: "Columbia",                  lines: ["expo"],               slug: "Columbia_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:sapperton",                 name: "Sapperton",                 lines: ["expo"],               slug: "Sapperton_station" },
+  { id: "vancouver:skytrain:expo:braid",                     name: "Braid",                     lines: ["expo"],               slug: "Braid_station" },
+  { id: "vancouver:skytrain:expo:lougheed-town-centre",      name: "Lougheed Town Centre",      lines: ["expo", "millennium"], slug: "Lougheed_Town_Centre_station" },
+  { id: "vancouver:skytrain:expo:production-way-university", name: "Production Way–University", lines: ["expo", "millennium"], slug: "Production_Way%E2%80%93University_station" },
+  { id: "vancouver:skytrain:expo:scott-road",                name: "Scott Road",                lines: ["expo"],               slug: "Scott_Road_station" },
+  { id: "vancouver:skytrain:expo:gateway",                   name: "Gateway",                   lines: ["expo"],               slug: "Gateway_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:surrey-central",            name: "Surrey Central",            lines: ["expo"],               slug: "Surrey_Central_station" },
+  { id: "vancouver:skytrain:expo:king-george",               name: "King George",               lines: ["expo"],               slug: "King_George_station" },
+  { id: "vancouver:skytrain:millennium:vcc-clark",           name: "VCC–Clark",                 lines: ["millennium"],         slug: "VCC%E2%80%93Clark_station" },
+  { id: "vancouver:skytrain:millennium:renfrew",             name: "Renfrew",                   lines: ["millennium"],         slug: "Renfrew_station" },
+  { id: "vancouver:skytrain:millennium:rupert",              name: "Rupert",                    lines: ["millennium"],         slug: "Rupert_station" },
+  { id: "vancouver:skytrain:millennium:gilmore",             name: "Gilmore",                   lines: ["millennium"],         slug: "Gilmore_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:millennium:brentwood-town-centre", name: "Brentwood Town Centre",   lines: ["millennium"],         slug: "Brentwood_Town_Centre_station" },
+  { id: "vancouver:skytrain:millennium:holdom",              name: "Holdom",                    lines: ["millennium"],         slug: "Holdom_station" },
+  { id: "vancouver:skytrain:millennium:sperling-burnaby-lake", name: "Sperling–Burnaby Lake",   lines: ["millennium"],         slug: "Sperling%E2%80%93Burnaby_Lake_station" },
+  { id: "vancouver:skytrain:millennium:lake-city-way",       name: "Lake City Way",             lines: ["millennium"],         slug: "Lake_City_Way_station" },
+  { id: "vancouver:skytrain:millennium:burquitlam",          name: "Burquitlam",                lines: ["millennium"],         slug: "Burquitlam_station" },
+  { id: "vancouver:skytrain:millennium:moody-centre",        name: "Moody Centre",              lines: ["millennium"],         slug: "Moody_Centre_station" },
+  { id: "vancouver:skytrain:millennium:inlet-centre",        name: "Inlet Centre",              lines: ["millennium"],         slug: "Inlet_Centre_station" },
+  { id: "vancouver:skytrain:millennium:coquitlam-central",   name: "Coquitlam Central",         lines: ["millennium"],         slug: "Coquitlam_Central_station" },
+  { id: "vancouver:skytrain:millennium:lincoln",             name: "Lincoln",                   lines: ["millennium"],         slug: "Lincoln_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:millennium:lafarge-lake-douglas", name: "Lafarge Lake–Douglas",     lines: ["millennium"],         slug: "Lafarge_Lake%E2%80%93Douglas_station" },
+  { id: "vancouver:skytrain:canada:vancouver-city-centre",   name: "Vancouver City Centre",     lines: ["canada"],             slug: "Vancouver_City_Centre_station" },
+  { id: "vancouver:skytrain:canada:yaletown-roundhouse",     name: "Yaletown–Roundhouse",       lines: ["canada"],             slug: "Yaletown%E2%80%93Roundhouse_station" },
+  { id: "vancouver:skytrain:canada:olympic-village",         name: "Olympic Village",           lines: ["canada"],             slug: "Olympic_Village_station" },
+  { id: "vancouver:skytrain:canada:broadway-city-hall",      name: "Broadway–City Hall",        lines: ["canada"],             slug: "Broadway%E2%80%93City_Hall_station" },
+  { id: "vancouver:skytrain:canada:king-edward",             name: "King Edward",               lines: ["canada"],             slug: "King_Edward_station" },
+  { id: "vancouver:skytrain:canada:oakridge-41st-avenue",    name: "Oakridge–41st Avenue",      lines: ["canada"],             slug: "Oakridge%E2%80%9341st_Avenue_station" },
+  { id: "vancouver:skytrain:canada:langara-49th-avenue",     name: "Langara–49th Avenue",       lines: ["canada"],             slug: "Langara%E2%80%9349th_Avenue_station" },
+  { id: "vancouver:skytrain:canada:marine-drive",            name: "Marine Drive",              lines: ["canada"],             slug: "Marine_Drive_station" },
+  { id: "vancouver:skytrain:canada:bridgeport",              name: "Bridgeport",                lines: ["canada"],             slug: "Bridgeport_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:aberdeen",                name: "Aberdeen",                  lines: ["canada"],             slug: "Aberdeen_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:lansdowne",               name: "Lansdowne",                 lines: ["canada"],             slug: "Lansdowne_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:capstan",                 name: "Capstan",                   lines: ["canada"],             slug: "Capstan_station" },
+  { id: "vancouver:skytrain:canada:richmond-brighouse",      name: "Richmond–Brighouse",        lines: ["canada"],             slug: "Richmond%E2%80%93Brighouse_station" },
+  { id: "vancouver:skytrain:canada:templeton",               name: "Templeton",                 lines: ["canada"],             slug: "Templeton_station" },
+  { id: "vancouver:skytrain:canada:sea-island-centre",       name: "Sea Island Centre",         lines: ["canada"],             slug: "Sea_Island_Centre_station" },
+  { id: "vancouver:skytrain:canada:yvr-airport",             name: "YVR–Airport",               lines: ["canada"],             slug: "YVR%E2%80%93Airport_station" },
 ];
+
+const STATION_BY_NAME = Object.fromEntries(STATIONS.map((s) => [s.name, s]));
 
 // ----- Constants -----
 const LINE_INFO = {
@@ -270,15 +273,16 @@ function StationCard({ station, onPick, disabled, side }) {
 }
 
 // ----- Leaderboard -----
-function Leaderboard({ stats, totalMatches }) {
+function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true }) {
   const ranked = useMemo(() => {
+    if (rows) return rows;
     return STATIONS.map((s) => ({
       ...s,
       elo: stats[s.name]?.elo ?? INITIAL_ELO,
       matches: stats[s.name]?.matches ?? 0,
       wins: stats[s.name]?.wins ?? 0,
     })).sort((a, b) => b.elo - a.elo);
-  }, [stats]);
+  }, [stats, rows]);
 
   const maxElo = ranked[0]?.elo ?? INITIAL_ELO;
   const minElo = ranked[ranked.length - 1]?.elo ?? INITIAL_ELO;
@@ -335,7 +339,7 @@ function Leaderboard({ stats, totalMatches }) {
               <div className="shrink-0 text-right">
                 <div className="font-mono text-sm font-bold text-stone-900 tabular-nums">{Math.round(s.elo)}</div>
                 <div className="text-[10px] text-stone-500 font-mono tabular-nums">
-                  {s.wins}W · {s.matches - s.wins}L
+                  {showWinsLosses ? `${s.wins}W · ${s.matches - s.wins}L` : `${s.matches} votes`}
                 </div>
               </div>
             </div>
@@ -351,13 +355,15 @@ export default function App() {
   const [stats, setStats] = useState({}); // { name: { elo, matches, wins } }
   const [pair, setPair] = useState(null); // [nameA, nameB]
   const [lastPairKey, setLastPairKey] = useState("");
-  const [view, setView] = useState("match"); // "match" | "leaderboard"
+  const [view, setView] = useState("match"); // "match" | "leaderboard" | "global"
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
   const [recentChange, setRecentChange] = useState(null); // { winner, loser, deltaW, deltaL }
   const [showPicker, setShowPicker] = useState(false);
   const [pickerA, setPickerA] = useState(STATIONS[0].name);
   const [pickerB, setPickerB] = useState(STATIONS[1].name);
+  const [globalStats, setGlobalStats] = useState(null);
+  const [globalLoading, setGlobalLoading] = useState(false);
 
   const sortedNames = useMemo(
     () => [...STATIONS].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
@@ -398,6 +404,17 @@ export default function App() {
   const handlePick = useCallback((winnerName, loserName) => {
     if (picking) return;
     setPicking(true);
+
+    // Fire global ELO update — no await, doesn't block UI
+    const winnerId = STATION_BY_NAME[winnerName]?.id;
+    const loserId  = STATION_BY_NAME[loserName]?.id;
+    if (winnerId && loserId) {
+      supabase.rpc("record_match", {
+        p_device_id: getDeviceId(),
+        p_winner_id: winnerId,
+        p_loser_id:  loserId,
+      }).then(() => {});
+    }
 
     setStats((prev) => {
       const wPrev = prev[winnerName] ?? { elo: INITIAL_ELO, matches: 0, wins: 0 };
@@ -449,6 +466,18 @@ export default function App() {
     setPair(pickPair({}, ""));
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }, []);
+
+  const handleGlobalTab = useCallback(async () => {
+    setView("global");
+    if (globalStats !== null) return;
+    setGlobalLoading(true);
+    const { data, error } = await supabase
+      .from("stations")
+      .select("id, name, elo, matches, line_ids")
+      .order("elo", { ascending: false });
+    setGlobalStats(error ? [] : data.map(row => ({ ...row, lines: row.line_ids })));
+    setGlobalLoading(false);
+  }, [globalStats]);
 
   const stationByName = useCallback(
     (name) => STATIONS.find((s) => s.name === name),
@@ -517,7 +546,16 @@ export default function App() {
               }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              Ranking
+              My Rankings
+            </button>
+            <button
+              onClick={handleGlobalTab}
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                view === "global" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Global
             </button>
           </div>
         </div>
@@ -660,7 +698,7 @@ export default function App() {
                 className="text-3xl sm:text-5xl text-stone-900 leading-tight"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
               >
-                The ranking
+                My Rankings
               </h2>
               <p className="text-sm text-stone-500">
                 {totalMatches === 0
@@ -680,6 +718,50 @@ export default function App() {
                 Keep voting
               </button>
             </div>
+          </div>
+        )}
+
+        {view === "global" && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-900 text-white text-[10px] uppercase tracking-[0.25em] font-semibold">
+                <Globe className="w-3 h-3" />
+                Global Standings
+              </div>
+              <h2
+                className="text-3xl sm:text-5xl text-stone-900 leading-tight"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
+              >
+                Everyone's ranking
+              </h2>
+              <p className="text-sm text-stone-500">Aggregated Elo across all players</p>
+              <p className="text-xs text-stone-400">Hit Refresh to see the latest standings</p>
+            </div>
+
+            {globalLoading && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
+              </div>
+            )}
+
+            {!globalLoading && globalStats?.length === 0 && (
+              <p className="text-center text-stone-500 py-8">Could not load global rankings. Try refreshing.</p>
+            )}
+
+            {!globalLoading && globalStats?.length > 0 && (
+              <>
+                <Leaderboard rows={globalStats} showWinsLosses={false} />
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => { setGlobalStats(null); handleGlobalTab(); }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-full text-sm font-semibold hover:bg-stone-700 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>
