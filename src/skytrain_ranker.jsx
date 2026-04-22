@@ -767,7 +767,7 @@ export default function App() {
       </main>
 
       <footer className="max-w-5xl mx-auto px-6 py-8 text-center text-xs text-stone-400">
-        Photos via Wikipedia · Progress saved automatically
+        Photos via Wikipedia · Progress saved automatically · Preview photo by <a href="https://commons.wikimedia.org/wiki/File:Vancouver_Skytrain_Rupert_station_train.jpg" target="_blank" rel="noopener" className="underline hover:text-stone-600">Wikimedia Commons</a> (CC BY-SA 2.0)
       </footer>
 
       <style>{`
