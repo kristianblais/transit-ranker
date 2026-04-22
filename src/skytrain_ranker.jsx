@@ -211,7 +211,7 @@ function StationCard({ station, onPick, disabled, side }) {
       aria-label={`Pick ${station.name}`}
     >
       {/* Image area */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
+      <div className="relative aspect-[16/9] sm:aspect-[4/3] w-full overflow-hidden bg-stone-100">
         {showSpinner && (
           <div className="absolute inset-0 flex items-center justify-center text-stone-400">
             <Loader2 className="w-8 h-8 animate-spin" />
@@ -252,8 +252,8 @@ function StationCard({ station, onPick, disabled, side }) {
       </div>
 
       {/* Name + lines */}
-      <div className="flex-1 flex flex-col justify-between p-5 gap-4">
-        <h3 className="font-serif text-2xl leading-tight text-stone-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+      <div className="flex-1 flex flex-col justify-between p-3 sm:p-5 gap-2 sm:gap-4">
+        <h3 className="font-serif text-lg sm:text-2xl leading-tight text-stone-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
           {station.name}
         </h3>
         <div className="flex flex-wrap gap-1.5">
@@ -504,7 +504,7 @@ export default function App() {
 
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-stone-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-lg bg-stone-900 flex items-center justify-center">
@@ -530,10 +530,10 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-stone-100 rounded-full p-1 shrink-0">
+          <div className="flex items-center gap-1 bg-stone-100 rounded-full p-1 w-full sm:w-auto">
             <button
               onClick={() => setView("match")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
                 view === "match" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               }`}
             >
@@ -541,7 +541,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setView("leaderboard")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 view === "leaderboard" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               }`}
             >
@@ -550,7 +550,7 @@ export default function App() {
             </button>
             <button
               onClick={handleGlobalTab}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 view === "global" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               }`}
             >
@@ -565,13 +565,13 @@ export default function App() {
         {view === "match" && pair && (
           <div className="space-y-6">
             {/* Prompt */}
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-1 sm:space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-900 text-white text-[10px] uppercase tracking-[0.25em] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Matchup #{Math.floor(totalMatches) + 1}
               </div>
               <h2
-                className="text-3xl sm:text-5xl text-stone-900 leading-tight"
+                className="text-2xl sm:text-5xl text-stone-900 leading-tight"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
               >
                 Which station do you prefer?
@@ -587,7 +587,7 @@ export default function App() {
                 disabled={picking}
                 side="A"
               />
-              <div className="flex md:flex-col items-center justify-center gap-2 py-2">
+              <div className="flex md:flex-col items-center justify-center gap-2 py-1 md:py-2">
                 <div className="hidden md:block w-px h-12 bg-stone-300" />
                 <span
                   className="font-bold text-stone-400 text-xl tracking-widest"
