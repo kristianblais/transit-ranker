@@ -288,16 +288,26 @@ function StationCard({ station, onPick, disabled, side }) {
 }
 
 // ----- Leaderboard -----
-function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true }) {
+function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true, sortBy = "elo" }) {
   const ranked = useMemo(() => {
-    if (rows) return rows;
-    return STATIONS.map((s) => ({
-      ...s,
-      elo: stats[s.name]?.elo ?? INITIAL_ELO,
-      matches: stats[s.name]?.matches ?? 0,
-      wins: stats[s.name]?.wins ?? 0,
-    })).sort((a, b) => b.elo - a.elo);
-  }, [stats, rows]);
+    const base = rows
+      ? rows
+      : STATIONS.map((s) => ({
+          ...s,
+          elo: stats[s.name]?.elo ?? INITIAL_ELO,
+          matches: stats[s.name]?.matches ?? 0,
+          wins: stats[s.name]?.wins ?? 0,
+        }));
+    if (sortBy === "winrate") {
+      return [...base].sort((a, b) => {
+        const wrA = a.matches > 0 ? a.wins / a.matches : -1;
+        const wrB = b.matches > 0 ? b.wins / b.matches : -1;
+        if (wrB !== wrA) return wrB - wrA;
+        return b.matches - a.matches;
+      });
+    }
+    return [...base].sort((a, b) => b.elo - a.elo);
+  }, [stats, rows, sortBy]);
 
   const maxElo = ranked[0]?.elo ?? INITIAL_ELO;
   const minElo = ranked[ranked.length - 1]?.elo ?? INITIAL_ELO;
@@ -352,7 +362,11 @@ function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true }) {
               </div>
               {/* Stats */}
               <div className="shrink-0 text-right">
-                <div className="font-mono text-sm font-bold text-stone-900 tabular-nums">{Math.round(s.elo)}</div>
+                <div className="font-mono text-sm font-bold text-stone-900 tabular-nums">
+                  {sortBy === "winrate"
+                    ? (s.matches > 0 ? `${Math.round((s.wins / s.matches) * 100)}%` : "—")
+                    : Math.round(s.elo)}
+                </div>
                 <div className="text-[10px] text-stone-500 font-mono tabular-nums">
                   {showWinsLosses ? `${s.wins}W · ${s.matches - s.wins}L` : `${s.matches} votes`}
                 </div>
@@ -379,6 +393,7 @@ export default function App() {
   const [pickerB, setPickerB] = useState(STATIONS[1].name);
   const [globalStats, setGlobalStats] = useState(null);
   const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalSort, setGlobalSort] = useState("elo"); // "elo" | "winrate"
 
   const sortedNames = useMemo(
     () => [...STATIONS].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
@@ -765,7 +780,27 @@ export default function App() {
 
             {!globalLoading && globalStats?.length > 0 && (
               <>
-                <Leaderboard rows={globalStats} showWinsLosses={true} />
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center p-1 rounded-full bg-stone-100 border border-stone-200">
+                    <button
+                      onClick={() => setGlobalSort("elo")}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        globalSort === "elo" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      Elo
+                    </button>
+                    <button
+                      onClick={() => setGlobalSort("winrate")}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        globalSort === "winrate" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      Win %
+                    </button>
+                  </div>
+                </div>
+                <Leaderboard rows={globalStats} showWinsLosses={true} sortBy={globalSort} />
                 <div className="flex justify-center pt-2">
                   <button
                     onClick={() => { setGlobalStats(null); handleGlobalTab(); }}
