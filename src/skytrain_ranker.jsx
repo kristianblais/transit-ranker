@@ -473,7 +473,7 @@ export default function App() {
     setGlobalLoading(true);
     const { data, error } = await supabase
       .from("stations")
-      .select("id, name, elo, matches, line_ids")
+      .select("id, name, elo, matches, wins, line_ids")
       .order("elo", { ascending: false });
     setGlobalStats(error ? [] : data.map(row => ({ ...row, lines: row.line_ids })));
     setGlobalLoading(false);
@@ -750,7 +750,7 @@ export default function App() {
 
             {!globalLoading && globalStats?.length > 0 && (
               <>
-                <Leaderboard rows={globalStats} showWinsLosses={false} />
+                <Leaderboard rows={globalStats} showWinsLosses={true} />
                 <div className="flex justify-center pt-2">
                   <button
                     onClick={() => { setGlobalStats(null); handleGlobalTab(); }}

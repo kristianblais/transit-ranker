@@ -23,6 +23,7 @@
 -- slug:      Wikipedia page slug used to fetch station photos
 -- elo:       global ELO rating, initialised at 1500
 -- matches:   total number of times this station has been compared
+-- wins:      number of times this station has won a comparison
 -- ------------------------------------------------------------
 create table stations (
   id        text    primary key,
@@ -32,7 +33,8 @@ create table stations (
   slug      text    not null,
   name      text    not null,
   elo       float   not null default 1500,
-  matches   int     not null default 0
+  matches   int     not null default 0,
+  wins      int     not null default 0
 );
 
 
@@ -128,8 +130,8 @@ begin
   new_elo_w  := winner.elo + k * (1.0 - expected_w);
   new_elo_l  := loser.elo  + k * (0.0 - expected_l);
 
-  -- Update global ELO and match counts
-  update stations set elo = new_elo_w, matches = matches + 1 where id = p_winner_id;
+  -- Update global ELO, match counts, and wins
+  update stations set elo = new_elo_w, matches = matches + 1, wins = wins + 1 where id = p_winner_id;
   update stations set elo = new_elo_l, matches = matches + 1 where id = p_loser_id;
 
   -- Append to audit log; city_id and system_id derived from station rows
