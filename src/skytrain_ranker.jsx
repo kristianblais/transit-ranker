@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal } from "lucide-react";
+import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal, Globe } from "lucide-react";
 import { supabase, getDeviceId } from "./supabase.js";
 
 // ----- Station data (all 54 current SkyTrain stations) -----
@@ -273,15 +273,16 @@ function StationCard({ station, onPick, disabled, side }) {
 }
 
 // ----- Leaderboard -----
-function Leaderboard({ stats, totalMatches }) {
+function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true }) {
   const ranked = useMemo(() => {
+    if (rows) return rows;
     return STATIONS.map((s) => ({
       ...s,
       elo: stats[s.name]?.elo ?? INITIAL_ELO,
       matches: stats[s.name]?.matches ?? 0,
       wins: stats[s.name]?.wins ?? 0,
     })).sort((a, b) => b.elo - a.elo);
-  }, [stats]);
+  }, [stats, rows]);
 
   const maxElo = ranked[0]?.elo ?? INITIAL_ELO;
   const minElo = ranked[ranked.length - 1]?.elo ?? INITIAL_ELO;
@@ -338,7 +339,7 @@ function Leaderboard({ stats, totalMatches }) {
               <div className="shrink-0 text-right">
                 <div className="font-mono text-sm font-bold text-stone-900 tabular-nums">{Math.round(s.elo)}</div>
                 <div className="text-[10px] text-stone-500 font-mono tabular-nums">
-                  {s.wins}W · {s.matches - s.wins}L
+                  {showWinsLosses ? `${s.wins}W · ${s.matches - s.wins}L` : `${s.matches} votes`}
                 </div>
               </div>
             </div>
@@ -354,13 +355,15 @@ export default function App() {
   const [stats, setStats] = useState({}); // { name: { elo, matches, wins } }
   const [pair, setPair] = useState(null); // [nameA, nameB]
   const [lastPairKey, setLastPairKey] = useState("");
-  const [view, setView] = useState("match"); // "match" | "leaderboard"
+  const [view, setView] = useState("match"); // "match" | "leaderboard" | "global"
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
   const [recentChange, setRecentChange] = useState(null); // { winner, loser, deltaW, deltaL }
   const [showPicker, setShowPicker] = useState(false);
   const [pickerA, setPickerA] = useState(STATIONS[0].name);
   const [pickerB, setPickerB] = useState(STATIONS[1].name);
+  const [globalStats, setGlobalStats] = useState(null);
+  const [globalLoading, setGlobalLoading] = useState(false);
 
   const sortedNames = useMemo(
     () => [...STATIONS].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
@@ -410,11 +413,7 @@ export default function App() {
         p_device_id: getDeviceId(),
         p_winner_id: winnerId,
         p_loser_id:  loserId,
-      }).then(({ data, error }) => {
-        console.log("record_match", { winnerId, loserId, data, error });
-      });
-    } else {
-      console.warn("Missing station id", { winnerName, winnerId, loserName, loserId });
+      }).then(() => {});
     }
 
     setStats((prev) => {
@@ -467,6 +466,18 @@ export default function App() {
     setPair(pickPair({}, ""));
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }, []);
+
+  const handleGlobalTab = useCallback(async () => {
+    setView("global");
+    if (globalStats !== null) return;
+    setGlobalLoading(true);
+    const { data, error } = await supabase
+      .from("stations")
+      .select("id, name, elo, matches, line_ids")
+      .order("elo", { ascending: false });
+    setGlobalStats(error ? [] : data.map(row => ({ ...row, lines: row.line_ids })));
+    setGlobalLoading(false);
+  }, [globalStats]);
 
   const stationByName = useCallback(
     (name) => STATIONS.find((s) => s.name === name),
@@ -535,7 +546,16 @@ export default function App() {
               }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              Ranking
+              My Rankings
+            </button>
+            <button
+              onClick={handleGlobalTab}
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                view === "global" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Global
             </button>
           </div>
         </div>
@@ -678,7 +698,7 @@ export default function App() {
                 className="text-3xl sm:text-5xl text-stone-900 leading-tight"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
               >
-                The ranking
+                My Rankings
               </h2>
               <p className="text-sm text-stone-500">
                 {totalMatches === 0
@@ -698,6 +718,50 @@ export default function App() {
                 Keep voting
               </button>
             </div>
+          </div>
+        )}
+
+        {view === "global" && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-900 text-white text-[10px] uppercase tracking-[0.25em] font-semibold">
+                <Globe className="w-3 h-3" />
+                Global Standings
+              </div>
+              <h2
+                className="text-3xl sm:text-5xl text-stone-900 leading-tight"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
+              >
+                Everyone's ranking
+              </h2>
+              <p className="text-sm text-stone-500">Aggregated Elo across all players</p>
+              <p className="text-xs text-stone-400">Hit Refresh to see the latest standings</p>
+            </div>
+
+            {globalLoading && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
+              </div>
+            )}
+
+            {!globalLoading && globalStats?.length === 0 && (
+              <p className="text-center text-stone-500 py-8">Could not load global rankings. Try refreshing.</p>
+            )}
+
+            {!globalLoading && globalStats?.length > 0 && (
+              <>
+                <Leaderboard rows={globalStats} showWinsLosses={false} />
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => { setGlobalStats(null); handleGlobalTab(); }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-full text-sm font-semibold hover:bg-stone-700 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>
