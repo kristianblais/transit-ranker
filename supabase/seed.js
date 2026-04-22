@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import vancouver from "../src/cities/vancouver.js";
+import seattle from "../src/cities/seattle.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -8,7 +9,7 @@ const supabase = createClient(
 );
 
 // Add city files here as new cities are added
-const CITIES = [vancouver];
+const CITIES = [vancouver, seattle];
 
 async function seed() {
   for (const city of CITIES) {
