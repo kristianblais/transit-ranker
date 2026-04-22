@@ -3,23 +3,26 @@
 // by both lines; southern stations are 1 Line only; Eastside stations are 2 Line only.
 const stations = [
   // 1 Line only (south of downtown core), north to south
+  { name: "Federal Way Downtown",             lines: ["one"],        slug: "Federal_Way_Downtown_station" },
+  { name: "Star Lake",                        lines: ["one"],        slug: "Star_Lake_station" },
+  { name: "Kent/Des Moines",                  lines: ["one"],        slug: "Kent/Des_Moines_station" },
   { name: "Angle Lake",                       lines: ["one"],        slug: "Angle_Lake_station" },
   { name: "SeaTac/Airport",                   lines: ["one"],        slug: "SeaTac/Airport_station" },
   { name: "Tukwila International Boulevard",  lines: ["one"],        slug: "Tukwila_International_Boulevard_station" },
   { name: "Rainier Beach",                    lines: ["one"],        slug: "Rainier_Beach_station" },
-  { name: "Othello",                          lines: ["one"],        slug: "Othello_station_(Sound_Transit)" },
+  { name: "Othello",                          lines: ["one"],        slug: "Othello_station" },
   { name: "Columbia City",                    lines: ["one"],        slug: "Columbia_City_station" },
   { name: "Mount Baker",                      lines: ["one"],        slug: "Mount_Baker_station" },
   { name: "Beacon Hill",                      lines: ["one"],        slug: "Beacon_Hill_station_(Sound_Transit)" },
-  { name: "SODO",                             lines: ["one"],        slug: "SODO_station" },
+  { name: "SODO",                             lines: ["one"],        slug: "SODO_station_(Sound_Transit)" },
   { name: "Stadium",                          lines: ["one"],        slug: "Stadium_station_(Sound_Transit)" },
 
   // Shared downtown tunnel + north corridor, south to north
   { name: "Chinatown–International District", lines: ["one", "two"], slug: "International_District/Chinatown_station" },
   { name: "Pioneer Square",                   lines: ["one", "two"], slug: "Pioneer_Square_station_(Sound_Transit)" },
-  { name: "Symphony",                         lines: ["one", "two"], slug: "Symphony_station" },
+  { name: "Symphony",                         lines: ["one", "two"], slug: "Symphony_station_(Sound_Transit)" },
   { name: "Westlake",                         lines: ["one", "two"], slug: "Westlake_station_(Sound_Transit)" },
-  { name: "Capitol Hill",                     lines: ["one", "two"], slug: "Capitol_Hill_station_(Sound_Transit)" },
+  { name: "Capitol Hill",                     lines: ["one", "two"], slug: "Capitol_Hill_station" },
   { name: "University of Washington",         lines: ["one", "two"], slug: "University_of_Washington_station" },
   { name: "U District",                       lines: ["one", "two"], slug: "U_District_station" },
   { name: "Roosevelt",                        lines: ["one", "two"], slug: "Roosevelt_station_(Sound_Transit)" },
@@ -34,12 +37,17 @@ const stations = [
   { name: "Mercer Island",                    lines: ["two"],        slug: "Mercer_Island_station" },
   { name: "South Bellevue",                   lines: ["two"],        slug: "South_Bellevue_station" },
   { name: "East Main",                        lines: ["two"],        slug: "East_Main_station" },
-  { name: "Downtown Bellevue",                lines: ["two"],        slug: "Downtown_Bellevue_station" },
-  { name: "Wilburton",                        lines: ["two"],        slug: "Wilburton_station" },
+  { name: "Downtown Bellevue",                lines: ["two"],        slug: "Downtown_Bellevue_station", images: [
+    "https://upload.wikimedia.org/wikipedia/commons/7/78/First_2_Line_trains_at_Bellevue_Downtown_station_-_April_27%2C_2024.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/d/dc/Aerial_view_of_Bellevue_Transit_Center.jpg",
+  ]},
+  { name: "Wilburton",                        lines: ["two"],        slug: "Wilburton_station_(Sound_Transit)" },
   { name: "Spring District",                  lines: ["two"],        slug: "Spring_District_station" },
   { name: "BelRed",                           lines: ["two"],        slug: "BelRed_station" },
   { name: "Overlake Village",                 lines: ["two"],        slug: "Overlake_Village_station" },
   { name: "Redmond Technology",               lines: ["two"],        slug: "Redmond_Technology_station" },
+  { name: "Marymoor Village",                 lines: ["two"],        slug: "Marymoor_Village_station" },
+  { name: "Downtown Redmond",                 lines: ["two"],        slug: "Downtown_Redmond_station" },
 ];
 
 const lineInfo = {

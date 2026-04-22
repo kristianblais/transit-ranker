@@ -153,9 +153,13 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
     setImgUrls(undefined);
     setLoadedFlags([]);
     setCurrentIdx(0);
-    fetchStationImages(station.slug).then(urls => {
-      if (!cancelled) setImgUrls(urls);
-    });
+    if (station.images) {
+      setImgUrls(station.images);
+    } else {
+      fetchStationImages(station.slug).then(urls => {
+        if (!cancelled) setImgUrls(urls);
+      });
+    }
     return () => { cancelled = true; };
   }, [station.slug]);
 
