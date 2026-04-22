@@ -1,49 +1,80 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal, MapPin, ChevronDown } from "lucide-react";
-import { CITIES, DEFAULT_CITY_ID } from "./cities";
+import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal, Globe } from "lucide-react";
+import { supabase, getDeviceId } from "./supabase.js";
+
+// ----- Station data (all 54 current SkyTrain stations) -----
+// Each station has a Wikipedia article slug used to fetch a lead image.
+const STATIONS = [
+  { id: "vancouver:skytrain:expo:waterfront",                name: "Waterfront",                lines: ["expo", "canada"],     slug: "Waterfront_station_(Vancouver)" },
+  { id: "vancouver:skytrain:expo:burrard",                   name: "Burrard",                   lines: ["expo"],               slug: "Burrard_station" },
+  { id: "vancouver:skytrain:expo:granville",                 name: "Granville",                 lines: ["expo"],               slug: "Granville_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:stadium-chinatown",         name: "Stadium–Chinatown",         lines: ["expo"],               slug: "Stadium%E2%80%93Chinatown_station" },
+  { id: "vancouver:skytrain:expo:main-street-science-world", name: "Main Street–Science World", lines: ["expo"],               slug: "Main_Street%E2%80%93Science_World_station" },
+  { id: "vancouver:skytrain:expo:commercial-broadway",       name: "Commercial–Broadway",       lines: ["expo", "millennium"], slug: "Commercial%E2%80%93Broadway_station" },
+  { id: "vancouver:skytrain:expo:nanaimo",                   name: "Nanaimo",                   lines: ["expo"],               slug: "Nanaimo_station" },
+  { id: "vancouver:skytrain:expo:29th-avenue",               name: "29th Avenue",               lines: ["expo"],               slug: "29th_Avenue_station" },
+  { id: "vancouver:skytrain:expo:joyce-collingwood",         name: "Joyce–Collingwood",         lines: ["expo"],               slug: "Joyce%E2%80%93Collingwood_station" },
+  { id: "vancouver:skytrain:expo:patterson",                 name: "Patterson",                 lines: ["expo"],               slug: "Patterson_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:metrotown",                 name: "Metrotown",                 lines: ["expo"],               slug: "Metrotown_station" },
+  { id: "vancouver:skytrain:expo:royal-oak",                 name: "Royal Oak",                 lines: ["expo"],               slug: "Royal_Oak_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:edmonds",                   name: "Edmonds",                   lines: ["expo"],               slug: "Edmonds_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:22nd-street",               name: "22nd Street",               lines: ["expo"],               slug: "22nd_Street_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:new-westminster",           name: "New Westminster",           lines: ["expo"],               slug: "New_Westminster_station" },
+  { id: "vancouver:skytrain:expo:columbia",                  name: "Columbia",                  lines: ["expo"],               slug: "Columbia_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:sapperton",                 name: "Sapperton",                 lines: ["expo"],               slug: "Sapperton_station" },
+  { id: "vancouver:skytrain:expo:braid",                     name: "Braid",                     lines: ["expo"],               slug: "Braid_station" },
+  { id: "vancouver:skytrain:expo:lougheed-town-centre",      name: "Lougheed Town Centre",      lines: ["expo", "millennium"], slug: "Lougheed_Town_Centre_station" },
+  { id: "vancouver:skytrain:expo:production-way-university", name: "Production Way–University", lines: ["expo", "millennium"], slug: "Production_Way%E2%80%93University_station" },
+  { id: "vancouver:skytrain:expo:scott-road",                name: "Scott Road",                lines: ["expo"],               slug: "Scott_Road_station" },
+  { id: "vancouver:skytrain:expo:gateway",                   name: "Gateway",                   lines: ["expo"],               slug: "Gateway_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:expo:surrey-central",            name: "Surrey Central",            lines: ["expo"],               slug: "Surrey_Central_station" },
+  { id: "vancouver:skytrain:expo:king-george",               name: "King George",               lines: ["expo"],               slug: "King_George_station" },
+  { id: "vancouver:skytrain:millennium:vcc-clark",           name: "VCC–Clark",                 lines: ["millennium"],         slug: "VCC%E2%80%93Clark_station" },
+  { id: "vancouver:skytrain:millennium:renfrew",             name: "Renfrew",                   lines: ["millennium"],         slug: "Renfrew_station" },
+  { id: "vancouver:skytrain:millennium:rupert",              name: "Rupert",                    lines: ["millennium"],         slug: "Rupert_station" },
+  { id: "vancouver:skytrain:millennium:gilmore",             name: "Gilmore",                   lines: ["millennium"],         slug: "Gilmore_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:millennium:brentwood-town-centre", name: "Brentwood Town Centre",   lines: ["millennium"],         slug: "Brentwood_Town_Centre_station" },
+  { id: "vancouver:skytrain:millennium:holdom",              name: "Holdom",                    lines: ["millennium"],         slug: "Holdom_station" },
+  { id: "vancouver:skytrain:millennium:sperling-burnaby-lake", name: "Sperling–Burnaby Lake",   lines: ["millennium"],         slug: "Sperling%E2%80%93Burnaby_Lake_station" },
+  { id: "vancouver:skytrain:millennium:lake-city-way",       name: "Lake City Way",             lines: ["millennium"],         slug: "Lake_City_Way_station" },
+  { id: "vancouver:skytrain:millennium:burquitlam",          name: "Burquitlam",                lines: ["millennium"],         slug: "Burquitlam_station" },
+  { id: "vancouver:skytrain:millennium:moody-centre",        name: "Moody Centre",              lines: ["millennium"],         slug: "Moody_Centre_station" },
+  { id: "vancouver:skytrain:millennium:inlet-centre",        name: "Inlet Centre",              lines: ["millennium"],         slug: "Inlet_Centre_station" },
+  { id: "vancouver:skytrain:millennium:coquitlam-central",   name: "Coquitlam Central",         lines: ["millennium"],         slug: "Coquitlam_Central_station" },
+  { id: "vancouver:skytrain:millennium:lincoln",             name: "Lincoln",                   lines: ["millennium"],         slug: "Lincoln_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:millennium:lafarge-lake-douglas", name: "Lafarge Lake–Douglas",     lines: ["millennium"],         slug: "Lafarge_Lake%E2%80%93Douglas_station" },
+  { id: "vancouver:skytrain:canada:vancouver-city-centre",   name: "Vancouver City Centre",     lines: ["canada"],             slug: "Vancouver_City_Centre_station" },
+  { id: "vancouver:skytrain:canada:yaletown-roundhouse",     name: "Yaletown–Roundhouse",       lines: ["canada"],             slug: "Yaletown%E2%80%93Roundhouse_station" },
+  { id: "vancouver:skytrain:canada:olympic-village",         name: "Olympic Village",           lines: ["canada"],             slug: "Olympic_Village_station" },
+  { id: "vancouver:skytrain:canada:broadway-city-hall",      name: "Broadway–City Hall",        lines: ["canada"],             slug: "Broadway%E2%80%93City_Hall_station" },
+  { id: "vancouver:skytrain:canada:king-edward",             name: "King Edward",               lines: ["canada"],             slug: "King_Edward_station" },
+  { id: "vancouver:skytrain:canada:oakridge-41st-avenue",    name: "Oakridge–41st Avenue",      lines: ["canada"],             slug: "Oakridge%E2%80%9341st_Avenue_station" },
+  { id: "vancouver:skytrain:canada:langara-49th-avenue",     name: "Langara–49th Avenue",       lines: ["canada"],             slug: "Langara%E2%80%9349th_Avenue_station" },
+  { id: "vancouver:skytrain:canada:marine-drive",            name: "Marine Drive",              lines: ["canada"],             slug: "Marine_Drive_station" },
+  { id: "vancouver:skytrain:canada:bridgeport",              name: "Bridgeport",                lines: ["canada"],             slug: "Bridgeport_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:aberdeen",                name: "Aberdeen",                  lines: ["canada"],             slug: "Aberdeen_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:lansdowne",               name: "Lansdowne",                 lines: ["canada"],             slug: "Lansdowne_station_(SkyTrain)" },
+  { id: "vancouver:skytrain:canada:capstan",                 name: "Capstan",                   lines: ["canada"],             slug: "Capstan_station" },
+  { id: "vancouver:skytrain:canada:richmond-brighouse",      name: "Richmond–Brighouse",        lines: ["canada"],             slug: "Richmond%E2%80%93Brighouse_station" },
+  { id: "vancouver:skytrain:canada:templeton",               name: "Templeton",                 lines: ["canada"],             slug: "Templeton_station" },
+  { id: "vancouver:skytrain:canada:sea-island-centre",       name: "Sea Island Centre",         lines: ["canada"],             slug: "Sea_Island_Centre_station" },
+  { id: "vancouver:skytrain:canada:yvr-airport",             name: "YVR–Airport",               lines: ["canada"],             slug: "YVR%E2%80%93Airport_station" },
+];
+
+const STATION_BY_NAME = Object.fromEntries(STATIONS.map((s) => [s.name, s]));
+
+// ----- Constants -----
+const LINE_INFO = {
+  expo:       { name: "Expo",       color: "#1565C0", bg: "rgba(21, 101, 192, 0.12)" },
+  millennium: { name: "Millennium", color: "#FFB300", bg: "rgba(255, 179, 0, 0.18)"  },
+  canada:     { name: "Canada",     color: "#00A887", bg: "rgba(0, 168, 135, 0.14)"  },
+};
 
 const INITIAL_ELO = 1500;
 const K_FACTOR = 32;
 
-const STATS_KEY_PREFIX = "transit_ranker_state_v1";
-const ACTIVE_CITY_KEY = "transit_ranker_active_city_v1";
-const LEGACY_STORAGE_KEY = "skytrain_ranker_state_v1";
+const STORAGE_KEY = "skytrain_ranker_state_v1";
 const IMG_CACHE_KEY = "skytrain_ranker_images_v4";
-
-const statsKeyFor = (cityId) => `${STATS_KEY_PREFIX}:${cityId}`;
-
-// One-shot migration: existing users have their Vancouver rankings under the
-// old global key. Move them under the Vancouver-scoped key on first load.
-function migrateLegacyStorage() {
-  try {
-    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!legacy) return;
-    const vancouverKey = statsKeyFor(DEFAULT_CITY_ID);
-    if (!localStorage.getItem(vancouverKey)) {
-      localStorage.setItem(vancouverKey, legacy);
-    }
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch (e) {}
-}
-
-function loadStatsForCity(cityId) {
-  try {
-    const value = localStorage.getItem(statsKeyFor(cityId));
-    if (!value) return {};
-    const saved = JSON.parse(value);
-    return saved.stats || {};
-  } catch (e) {
-    return {};
-  }
-}
-
-function loadActiveCityId() {
-  try {
-    const id = localStorage.getItem(ACTIVE_CITY_KEY);
-    if (id && CITIES[id]) return id;
-  } catch (e) {}
-  return DEFAULT_CITY_ID;
-}
 
 // ----- ELO math -----
 function expectedScore(rA, rB) {
@@ -59,8 +90,8 @@ function updateElo(rA, rB, scoreA) {
 }
 
 // ----- Pick the next pair: prefer stations with the fewest matchups, then random partner -----
-function pickPair(stations, stats, lastPairKey) {
-  const names = stations.map((s) => s.name);
+function pickPair(stats, lastPairKey) {
+  const names = STATIONS.map((s) => s.name);
   // Sort by match count ascending, with a small random tiebreak so it doesn't always pick the same one
   const sortedByCount = [...names].sort((a, b) => {
     const ca = stats[a]?.matches ?? 0;
@@ -143,7 +174,7 @@ async function fetchStationImages(slug) {
 }
 
 // ----- Station card -----
-function StationCard({ station, onPick, disabled, side, lineInfo }) {
+function StationCard({ station, onPick, disabled, side }) {
   const [imgUrls, setImgUrls] = useState(undefined); // undefined=loading, []=none, [...]=ok
   const [loadedFlags, setLoadedFlags] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -153,13 +184,9 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
     setImgUrls(undefined);
     setLoadedFlags([]);
     setCurrentIdx(0);
-    if (station.images) {
-      setImgUrls(station.images);
-    } else {
-      fetchStationImages(station.slug).then(urls => {
-        if (!cancelled) setImgUrls(urls);
-      });
-    }
+    fetchStationImages(station.slug).then(urls => {
+      if (!cancelled) setImgUrls(urls);
+    });
     return () => { cancelled = true; };
   }, [station.slug]);
 
@@ -171,7 +198,7 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
   }, [imgUrls]);
 
   const primaryLine = station.lines[0];
-  const accent = lineInfo[primaryLine].color;
+  const accent = LINE_INFO[primaryLine].color;
   const hasImages = imgUrls && imgUrls.length > 0;
   const showSpinner = imgUrls === undefined || (hasImages && !loadedFlags[0]);
 
@@ -184,7 +211,7 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
       aria-label={`Pick ${station.name}`}
     >
       {/* Image area */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
+      <div className="relative aspect-[16/9] sm:aspect-[4/3] w-full overflow-hidden bg-stone-100">
         {showSpinner && (
           <div className="absolute inset-0 flex items-center justify-center text-stone-400">
             <Loader2 className="w-8 h-8 animate-spin" />
@@ -225,8 +252,8 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
       </div>
 
       {/* Name + lines */}
-      <div className="flex-1 flex flex-col justify-between p-5 gap-4">
-        <h3 className="font-serif text-2xl leading-tight text-stone-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+      <div className="flex-1 flex flex-col justify-between p-3 sm:p-5 gap-2 sm:gap-4">
+        <h3 className="font-serif text-lg sm:text-2xl leading-tight text-stone-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
           {station.name}
         </h3>
         <div className="flex flex-wrap gap-1.5">
@@ -234,9 +261,9 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
             <span
               key={l}
               className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded"
-              style={{ backgroundColor: lineInfo[l].bg, color: lineInfo[l].color }}
+              style={{ backgroundColor: LINE_INFO[l].bg, color: LINE_INFO[l].color }}
             >
-              {lineInfo[l].name}
+              {LINE_INFO[l].name}
             </span>
           ))}
         </div>
@@ -246,15 +273,16 @@ function StationCard({ station, onPick, disabled, side, lineInfo }) {
 }
 
 // ----- Leaderboard -----
-function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
+function Leaderboard({ stats, totalMatches, rows, showWinsLosses = true }) {
   const ranked = useMemo(() => {
-    return stations.map((s) => ({
+    if (rows) return rows;
+    return STATIONS.map((s) => ({
       ...s,
       elo: stats[s.name]?.elo ?? INITIAL_ELO,
       matches: stats[s.name]?.matches ?? 0,
       wins: stats[s.name]?.wins ?? 0,
     })).sort((a, b) => b.elo - a.elo);
-  }, [stats, stations]);
+  }, [stats, rows]);
 
   const maxElo = ranked[0]?.elo ?? INITIAL_ELO;
   const minElo = ranked[ranked.length - 1]?.elo ?? INITIAL_ELO;
@@ -270,7 +298,7 @@ function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
       <div className="space-y-1.5">
         {ranked.map((s, idx) => {
           const primaryLine = s.lines[0];
-          const accent = lineInfo[primaryLine].color;
+          const accent = LINE_INFO[primaryLine].color;
           const barPct = ((s.elo - minElo) / eloRange) * 100;
           const isTop3 = idx < 3 && s.matches > 0;
           return (
@@ -295,7 +323,7 @@ function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
                   </span>
                   <div className="flex gap-1">
                     {s.lines.map((l) => (
-                      <span key={l} className="w-2 h-2 rounded-full" style={{ backgroundColor: lineInfo[l].color }} />
+                      <span key={l} className="w-2 h-2 rounded-full" style={{ backgroundColor: LINE_INFO[l].color }} />
                     ))}
                   </div>
                 </div>
@@ -311,7 +339,7 @@ function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
               <div className="shrink-0 text-right">
                 <div className="font-mono text-sm font-bold text-stone-900 tabular-nums">{Math.round(s.elo)}</div>
                 <div className="text-[10px] text-stone-500 font-mono tabular-nums">
-                  {s.wins}W · {s.matches - s.wins}L
+                  {showWinsLosses ? `${s.wins}W · ${s.matches - s.wins}L` : `${s.matches} votes`}
                 </div>
               </div>
             </div>
@@ -324,25 +352,22 @@ function Leaderboard({ stats, totalMatches, stations, lineInfo }) {
 
 // ----- Main component -----
 export default function App() {
-  const [activeCityId, setActiveCityId] = useState(DEFAULT_CITY_ID);
-  const city = CITIES[activeCityId];
-  const stations = city.stations;
-  const lineInfo = city.lineInfo;
-
   const [stats, setStats] = useState({}); // { name: { elo, matches, wins } }
   const [pair, setPair] = useState(null); // [nameA, nameB]
   const [lastPairKey, setLastPairKey] = useState("");
-  const [view, setView] = useState("match"); // "match" | "leaderboard"
+  const [view, setView] = useState("match"); // "match" | "leaderboard" | "global"
   const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState(false);
   const [recentChange, setRecentChange] = useState(null); // { winner, loser, deltaW, deltaL }
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerA, setPickerA] = useState(stations[0].name);
-  const [pickerB, setPickerB] = useState(stations[1].name);
+  const [pickerA, setPickerA] = useState(STATIONS[0].name);
+  const [pickerB, setPickerB] = useState(STATIONS[1].name);
+  const [globalStats, setGlobalStats] = useState(null);
+  const [globalLoading, setGlobalLoading] = useState(false);
 
   const sortedNames = useMemo(
-    () => [...stations].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
-    [stations]
+    () => [...STATIONS].sort((a, b) => a.name.localeCompare(b.name)).map(s => s.name),
+    []
   );
 
   const totalMatches = useMemo(
@@ -350,32 +375,46 @@ export default function App() {
     [stats]
   );
 
-  // Initial load — migrate legacy storage, then load the last active city.
+  // Initial load
   useEffect(() => {
     loadImageCacheFromStorage();
-    migrateLegacyStorage();
-    const initialCityId = loadActiveCityId();
-    const initialCity = CITIES[initialCityId];
-    const initialStats = loadStatsForCity(initialCityId);
-    setActiveCityId(initialCityId);
-    setStats(initialStats);
-    setPickerA(initialCity.stations[0].name);
-    setPickerB(initialCity.stations[1].name);
-    setPair(pickPair(initialCity.stations, initialStats, ""));
+    try {
+      const value = localStorage.getItem(STORAGE_KEY);
+      if (value) {
+        const saved = JSON.parse(value);
+        setStats(saved.stats || {});
+        setPair(pickPair(saved.stats || {}, ""));
+      } else {
+        setPair(pickPair({}, ""));
+      }
+    } catch (e) {
+      setPair(pickPair({}, ""));
+    }
     setLoading(false);
   }, []);
 
-  // Persist stats to the active city's key whenever they change.
+  // Persist whenever stats change (but not on first paint)
   useEffect(() => {
     if (loading) return;
     try {
-      localStorage.setItem(statsKeyFor(activeCityId), JSON.stringify({ stats }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ stats }));
     } catch (e) {}
-  }, [stats, activeCityId, loading]);
+  }, [stats, loading]);
 
   const handlePick = useCallback((winnerName, loserName) => {
     if (picking) return;
     setPicking(true);
+
+    // Fire global ELO update — no await, doesn't block UI
+    const winnerId = STATION_BY_NAME[winnerName]?.id;
+    const loserId  = STATION_BY_NAME[loserName]?.id;
+    if (winnerId && loserId) {
+      supabase.rpc("record_match", {
+        p_device_id: getDeviceId(),
+        p_winner_id: winnerId,
+        p_loser_id:  loserId,
+      }).then(() => {});
+    }
 
     setStats((prev) => {
       const wPrev = prev[winnerName] ?? { elo: INITIAL_ELO, matches: 0, wins: 0 };
@@ -399,20 +438,20 @@ export default function App() {
       setStats((curr) => {
         const key = [winnerName, loserName].sort().join("|");
         setLastPairKey(key);
-        setPair(pickPair(stations, curr, key));
+        setPair(pickPair(curr, key));
         return curr;
       });
       setPicking(false);
       setTimeout(() => setRecentChange(null), 1800);
     }, 350);
-  }, [picking, stations]);
+  }, [picking]);
 
   const handleSkip = useCallback(() => {
     if (!pair) return;
     const key = [pair[0], pair[1]].sort().join("|");
     setLastPairKey(key);
-    setPair(pickPair(stations, stats, key));
-  }, [pair, stats, stations]);
+    setPair(pickPair(stats, key));
+  }, [pair, stats]);
 
   const handleSetCustomPair = useCallback(() => {
     if (pickerA === pickerB) return;
@@ -421,34 +460,28 @@ export default function App() {
   }, [pickerA, pickerB]);
 
   const handleReset = useCallback(async () => {
-    if (!confirm(`Reset ${city.name} rankings? This cannot be undone.`)) return;
+    if (!confirm("Reset all rankings? This cannot be undone.")) return;
     setStats({});
     setRecentChange(null);
-    setPair(pickPair(stations, {}, ""));
-    try { localStorage.removeItem(statsKeyFor(activeCityId)); } catch (e) {}
-  }, [activeCityId, city.name, stations]);
+    setPair(pickPair({}, ""));
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  }, []);
 
-  // Switching cities: atomically load the target city's stats and reset match state.
-  // Rankings stay isolated per city — we never mix stats across cities.
-  const handleCityChange = useCallback((nextCityId) => {
-    if (nextCityId === activeCityId) return;
-    const nextCity = CITIES[nextCityId];
-    if (!nextCity) return;
-    const nextStats = loadStatsForCity(nextCityId);
-    setActiveCityId(nextCityId);
-    setStats(nextStats);
-    setPair(pickPair(nextCity.stations, nextStats, ""));
-    setLastPairKey("");
-    setRecentChange(null);
-    setShowPicker(false);
-    setPickerA(nextCity.stations[0].name);
-    setPickerB(nextCity.stations[1].name);
-    try { localStorage.setItem(ACTIVE_CITY_KEY, nextCityId); } catch (e) {}
-  }, [activeCityId]);
+  const handleGlobalTab = useCallback(async () => {
+    setView("global");
+    if (globalStats !== null) return;
+    setGlobalLoading(true);
+    const { data, error } = await supabase
+      .from("stations")
+      .select("id, name, elo, matches, wins, line_ids")
+      .order("elo", { ascending: false });
+    setGlobalStats(error ? [] : data.map(row => ({ ...row, lines: row.line_ids })));
+    setGlobalLoading(false);
+  }, [globalStats]);
 
   const stationByName = useCallback(
-    (name) => stations.find((s) => s.name === name),
-    [stations]
+    (name) => STATIONS.find((s) => s.name === name),
+    []
   );
 
   if (loading) {
@@ -471,63 +504,36 @@ export default function App() {
 
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-stone-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-lg bg-stone-900 flex items-center justify-center">
                 <Train className="w-5 h-5 text-white" />
               </div>
-              {/* Active-city line color dots */}
+              {/* Three line color dots */}
               <div className="absolute -bottom-1 -right-1 flex gap-[2px]">
-                {Object.values(lineInfo).map((info, i) => (
-                  <span
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: info.color }}
-                  />
-                ))}
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.expo.color }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.millennium.color }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: LINE_INFO.canada.color }} />
               </div>
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <h1
                 className="text-xl sm:text-2xl font-bold text-stone-900 leading-none truncate"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
               >
-                Transit Station Showdown
+                SkyTrain Showdown
               </h1>
               <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-500 mt-1">
-                {stations.length} stations · Elo ranked
+                Vancouver · 54 stations · Elo ranked
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
-            <label className="relative group">
-              <span className="sr-only">Select city</span>
-              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border-2 border-stone-900 rounded-full shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all cursor-pointer">
-                <MapPin className="w-4 h-4 text-stone-900 shrink-0" />
-                <span className="text-xs sm:text-sm font-semibold text-stone-900 whitespace-nowrap">
-                  {city.selectorLabel}
-                </span>
-                <ChevronDown className="w-4 h-4 text-stone-500 shrink-0" />
-              </div>
-              <select
-                value={activeCityId}
-                onChange={(e) => handleCityChange(e.target.value)}
-                aria-label="Select city"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              >
-                {Object.values(CITIES).map((c) => (
-                  <option key={c.id} value={c.id}>{c.selectorLabel}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="flex items-center gap-1 bg-stone-100 rounded-full p-1 shrink-0">
+          <div className="flex items-center gap-1 bg-stone-100 rounded-full p-1 w-full sm:w-auto">
             <button
               onClick={() => setView("match")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
                 view === "match" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               }`}
             >
@@ -535,12 +541,21 @@ export default function App() {
             </button>
             <button
               onClick={() => setView("leaderboard")}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 view === "leaderboard" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               <Trophy className="w-3.5 h-3.5" />
-              Ranking
+              My Rankings
+            </button>
+            <button
+              onClick={handleGlobalTab}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                view === "global" ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Global
             </button>
           </div>
         </div>
@@ -550,13 +565,13 @@ export default function App() {
         {view === "match" && pair && (
           <div className="space-y-6">
             {/* Prompt */}
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-1 sm:space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-900 text-white text-[10px] uppercase tracking-[0.25em] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Matchup #{Math.floor(totalMatches) + 1}
               </div>
               <h2
-                className="text-3xl sm:text-5xl text-stone-900 leading-tight"
+                className="text-2xl sm:text-5xl text-stone-900 leading-tight"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
               >
                 Which station do you prefer?
@@ -571,9 +586,8 @@ export default function App() {
                 onPick={() => handlePick(pair[0], pair[1])}
                 disabled={picking}
                 side="A"
-                lineInfo={lineInfo}
               />
-              <div className="flex md:flex-col items-center justify-center gap-2 py-2">
+              <div className="flex md:flex-col items-center justify-center gap-2 py-1 md:py-2">
                 <div className="hidden md:block w-px h-12 bg-stone-300" />
                 <span
                   className="font-bold text-stone-400 text-xl tracking-widest"
@@ -588,7 +602,6 @@ export default function App() {
                 onPick={() => handlePick(pair[1], pair[0])}
                 disabled={picking}
                 side="B"
-                lineInfo={lineInfo}
               />
             </div>
 
@@ -685,7 +698,7 @@ export default function App() {
                 className="text-3xl sm:text-5xl text-stone-900 leading-tight"
                 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
               >
-                The ranking
+                My Rankings
               </h2>
               <p className="text-sm text-stone-500">
                 {totalMatches === 0
@@ -694,12 +707,7 @@ export default function App() {
               </p>
             </div>
 
-            <Leaderboard
-              stats={stats}
-              totalMatches={Math.floor(totalMatches)}
-              stations={stations}
-              lineInfo={lineInfo}
-            />
+            <Leaderboard stats={stats} totalMatches={Math.floor(totalMatches)} />
 
             <div className="flex justify-center pt-2">
               <button
@@ -712,10 +720,54 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {view === "global" && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-900 text-white text-[10px] uppercase tracking-[0.25em] font-semibold">
+                <Globe className="w-3 h-3" />
+                Global Standings
+              </div>
+              <h2
+                className="text-3xl sm:text-5xl text-stone-900 leading-tight"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700 }}
+              >
+                Everyone's ranking
+              </h2>
+              <p className="text-sm text-stone-500">Aggregated Elo across all players</p>
+              <p className="text-xs text-stone-400">Hit Refresh to see the latest standings</p>
+            </div>
+
+            {globalLoading && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-stone-400" />
+              </div>
+            )}
+
+            {!globalLoading && globalStats?.length === 0 && (
+              <p className="text-center text-stone-500 py-8">Could not load global rankings. Try refreshing.</p>
+            )}
+
+            {!globalLoading && globalStats?.length > 0 && (
+              <>
+                <Leaderboard rows={globalStats} showWinsLosses={true} />
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => { setGlobalStats(null); handleGlobalTab(); }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-full text-sm font-semibold hover:bg-stone-700 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </main>
 
       <footer className="max-w-5xl mx-auto px-6 py-8 text-center text-xs text-stone-400">
-        Photos via Wikipedia · Progress saved automatically
+        Photos via Wikipedia · Progress saved automatically · Preview photo by <a href="https://commons.wikimedia.org/wiki/File:Vancouver_Skytrain_Rupert_station_train.jpg" target="_blank" rel="noopener" className="underline hover:text-stone-600">Wikimedia Commons</a> (CC BY-SA 2.0)
       </footer>
 
       <style>{`
