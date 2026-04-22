@@ -1,3 +1,4 @@
+// Vancouver SkyTrain — Expo, Millennium, and Canada Lines (54 stations).
 const stations = [
   { id: "vancouver:skytrain:expo:waterfront",                name: "Waterfront",                lines: ["expo", "canada"],     slug: "Waterfront_station_(Vancouver)" },
   { id: "vancouver:skytrain:expo:burrard",                   name: "Burrard",                   lines: ["expo"],               slug: "Burrard_station" },
@@ -55,8 +56,19 @@ const stations = [
   { id: "vancouver:skytrain:canada:yvr-airport",             name: "YVR–Airport",               lines: ["canada"],             slug: "YVR%E2%80%93Airport_station" },
 ];
 
+const lineInfo = {
+  expo:       { name: "Expo",       color: "#1565C0", bg: "rgba(21, 101, 192, 0.12)" },
+  millennium: { name: "Millennium", color: "#FFB300", bg: "rgba(255, 179, 0, 0.18)"  },
+  canada:     { name: "Canada",     color: "#00A887", bg: "rgba(0, 168, 135, 0.14)"  },
+};
+
 export default {
-  city_id:   "vancouver",
-  system_id: "skytrain",
+  city_id:       "vancouver",
+  system_id:     "skytrain",
+  name:          "Vancouver",
+  systemName:    "SkyTrain",
+  brandTitle:    "SkyTrain Showdown",
+  selectorLabel: "Vancouver · SkyTrain",
   stations,
+  lineInfo,
 };
