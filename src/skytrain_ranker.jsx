@@ -92,7 +92,7 @@ function updateElo(rA, rB, scoreA) {
 // ----- Pick the next pair -----
 // Below CALIBRATION_MATCHES, rating isn't meaningful yet, so partner is random.
 // After, partner is drawn from nearest-rated stations (expected score near 0.5 = most info per vote).
-const CALIBRATION_MATCHES = 2;
+const CALIBRATION_MATCHES = 1;
 const NEIGHBOR_POOL = 6;
 
 function pickPair(stats, lastPairKey) {
