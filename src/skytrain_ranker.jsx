@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Trophy, Trash2, RotateCcw, Train, Shuffle, Award, Loader2, SlidersHorizontal } from "lucide-react";
+import { supabase, getDeviceId } from "./supabase.js";
 
 // ----- Station data (all 54 current SkyTrain stations) -----
 // Each station has a Wikipedia article slug used to fetch a lead image.
@@ -59,6 +60,8 @@ const STATIONS = [
   { id: "vancouver:skytrain:canada:sea-island-centre",       name: "Sea Island Centre",         lines: ["canada"],             slug: "Sea_Island_Centre_station" },
   { id: "vancouver:skytrain:canada:yvr-airport",             name: "YVR–Airport",               lines: ["canada"],             slug: "YVR%E2%80%93Airport_station" },
 ];
+
+const STATION_BY_NAME = Object.fromEntries(STATIONS.map((s) => [s.name, s]));
 
 // ----- Constants -----
 const LINE_INFO = {
@@ -398,6 +401,21 @@ export default function App() {
   const handlePick = useCallback((winnerName, loserName) => {
     if (picking) return;
     setPicking(true);
+
+    // Fire global ELO update — no await, doesn't block UI
+    const winnerId = STATION_BY_NAME[winnerName]?.id;
+    const loserId  = STATION_BY_NAME[loserName]?.id;
+    if (winnerId && loserId) {
+      supabase.rpc("record_match", {
+        p_device_id: getDeviceId(),
+        p_winner_id: winnerId,
+        p_loser_id:  loserId,
+      }).then(({ data, error }) => {
+        console.log("record_match", { winnerId, loserId, data, error });
+      });
+    } else {
+      console.warn("Missing station id", { winnerName, winnerId, loserName, loserId });
+    }
 
     setStats((prev) => {
       const wPrev = prev[winnerName] ?? { elo: INITIAL_ELO, matches: 0, wins: 0 };
