@@ -89,28 +89,43 @@ function updateElo(rA, rB, scoreA) {
   return [newA, newB];
 }
 
-// ----- Pick the next pair: prefer stations with the fewest matchups, then random partner -----
+// ----- Pick the next pair -----
+// Below CALIBRATION_MATCHES, rating isn't meaningful yet, so partner is random.
+// After, partner is drawn from nearest-rated stations (expected score near 0.5 = most info per vote).
+const CALIBRATION_MATCHES = 5;
+const NEIGHBOR_POOL = 6;
+
 function pickPair(stats, lastPairKey) {
   const names = STATIONS.map((s) => s.name);
-  // Sort by match count ascending, with a small random tiebreak so it doesn't always pick the same one
+  const matchCount = (n) => stats[n]?.matches ?? 0;
+  const rating = (n) => stats[n]?.elo ?? INITIAL_ELO;
+
   const sortedByCount = [...names].sort((a, b) => {
-    const ca = stats[a]?.matches ?? 0;
-    const cb = stats[b]?.matches ?? 0;
-    if (ca !== cb) return ca - cb;
-    return Math.random() - 0.5;
+    const diff = matchCount(a) - matchCount(b);
+    return diff !== 0 ? diff : Math.random() - 0.5;
   });
 
-  // Try a few candidate pairs and pick one that isn't a repeat of the last shown pair
   for (let attempt = 0; attempt < 20; attempt++) {
     const a = sortedByCount[Math.floor(Math.random() * Math.min(8, sortedByCount.length))];
+
     let b;
-    do {
-      b = names[Math.floor(Math.random() * names.length)];
-    } while (b === a);
+    if (matchCount(a) < CALIBRATION_MATCHES) {
+      do {
+        b = names[Math.floor(Math.random() * names.length)];
+      } while (b === a);
+    } else {
+      const rA = rating(a);
+      const neighbors = names
+        .filter((n) => n !== a)
+        .sort((x, y) => Math.abs(rating(x) - rA) - Math.abs(rating(y) - rA))
+        .slice(0, NEIGHBOR_POOL);
+      b = neighbors[Math.floor(Math.random() * neighbors.length)];
+    }
+
     const key = [a, b].sort().join("|");
     if (key !== lastPairKey) return [a, b];
   }
-  // Fallback
+
   const a = sortedByCount[0];
   let b = names[Math.floor(Math.random() * names.length)];
   if (b === a) b = names[(names.indexOf(a) + 1) % names.length];
